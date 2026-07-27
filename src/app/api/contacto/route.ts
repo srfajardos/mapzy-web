@@ -5,44 +5,37 @@ import { Readable } from 'stream';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Reformateador estricto PEM PKCS#8 para OpenSSL en Node.js Vercel
+// Formateador PEM PKCS#8 compatible con OpenSSL 3.0 en Node.js de Vercel
 function getFormattedPrivateKey(rawKey: string): string {
   if (!rawKey) return '';
   let key = rawKey.trim();
 
-  // Remover comillas envolventes si las tiene
+  // Remover comillas envolventes de comillas simples o dobles
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.substring(1, key.length - 1);
   }
 
-  // Reemplazar saltos de línea escapados (simples y dobles)
+  // Reemplazar saltos de línea escapados (simples y dobles) por saltos reales \n
   key = key.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
 
-  const header = '-----BEGIN PRIVATE KEY-----';
-  const footer = '-----END PRIVATE KEY-----';
+  // Normalizar retornos de carro de Windows (\r\n) a (\n)
+  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
-  // Extraer únicamente el cuerpo base64 eliminando encabezados y cualquier espacio/salto previo
-  const body = key
-    .replace(header, '')
-    .replace(footer, '')
-    .replace(/[^A-Za-z0-9+/=]/g, '');
-
-  if (!body) return rawKey;
-
-  // Reestructurar el cuerpo en líneas de 64 caracteres según estándar PEM
-  const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
-
-  return `${header}\n${formattedBody}\n${footer}\n`;
+  return key;
 }
 
-// Configuración de Google Drive Auth con la cuenta de servicio
+// Configuración de Google Drive Auth con GoogleAuth
 function getDriveService() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const privateKey = getFormattedPrivateKey(process.env.GOOGLE_PRIVATE_KEY || '');
 
-  const auth = new google.auth.JWT({
-    email,
-    key: privateKey,
+  console.log('📌 Diagnóstico Key Google - Longitud:', privateKey.length, 'Inicio:', privateKey.substring(0, 32));
+
+  const auth = new google.auth.GoogleAuth({
+    credentials: {
+      client_email: email,
+      private_key: privateKey,
+    },
     scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
   });
 
