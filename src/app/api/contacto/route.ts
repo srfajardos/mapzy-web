@@ -5,16 +5,34 @@ import { Readable } from 'stream';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Formateador robusto de clave privada RSA para OpenSSL en Node.js de Vercel
+function getFormattedPrivateKey(rawKey: string): string {
+  if (!rawKey) return '';
+  let key = rawKey.trim();
+  
+  // Remover comillas envolventes si Vercel las incluyó
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.substring(1, key.length - 1);
+  }
+
+  // Reemplazar secuencias literales \n por saltos de línea reales
+  key = key.replace(/\\n/g, '\n');
+
+  // Asegurar formato PEM multilínea estándar
+  if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
+    key = `-----BEGIN PRIVATE KEY-----\n${key}`;
+  }
+  if (!key.includes('-----END PRIVATE KEY-----')) {
+    key = `${key}\n-----END PRIVATE KEY-----`;
+  }
+
+  return key;
+}
+
 // Configuración de Google Drive Auth con la cuenta de servicio
 function getDriveService() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-
-  // Sanitizar llaves con saltos de línea escapados o encerradas en comillas
-  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-    privateKey = privateKey.substring(1, privateKey.length - 1);
-  }
-  privateKey = privateKey.replace(/\\n/g, '\n');
+  const privateKey = getFormattedPrivateKey(process.env.GOOGLE_PRIVATE_KEY || '');
 
   const auth = new google.auth.JWT({
     email,
@@ -40,25 +58,27 @@ export async function POST(req: NextRequest) {
     const descripcion = formData.get('Descripción Técnica')?.toString() || formData.get('Mensaje de Consulta')?.toString() || 'Sin descripción';
     const turnstileToken = formData.get('cf-turnstile-response')?.toString();
 
-    // 1. Validar Captcha Turnstile de Cloudflare si se envió token y se configuró secret
-    if (turnstileToken && process.env.TURNSTILE_SECRET_KEY) {
+    // Sanitizar Secret Key de Turnstile (eliminar espacios y comillas)
+    const turnstileSecret = (process.env.TURNSTILE_SECRET_KEY || '').trim().replace(/^["']|["']$/g, '');
+
+    // 1. Validar Captcha Turnstile de Cloudflare si existe token y secret
+    if (turnstileToken && turnstileSecret) {
       try {
         const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            secret: process.env.TURNSTILE_SECRET_KEY,
+            secret: turnstileSecret,
             response: turnstileToken,
           }),
         });
 
         const turnstileData = await turnstileRes.json();
         if (!turnstileData.success) {
-          console.error('Verificación Turnstile fallida:', turnstileData);
-          // Si el captcha devuelve error por hostname o formato, continuamos si es un intento válido
+          console.warn('Turnstile respondió avisos (no bloqueante):', turnstileData);
         }
       } catch (tErr) {
-        console.error('Error validando Turnstile:', tErr);
+        console.warn('Excepción en verificación Turnstile (no bloqueante):', tErr);
       }
     }
 
@@ -67,44 +87,54 @@ export async function POST(req: NextRequest) {
     let driveFileName = '';
     const file = formData.get('Archivo Adjunto') as File | null;
 
-    if (file && file.size > 0 && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
-      try {
-        const drive = getDriveService();
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const stream = new Readable();
-        stream.push(buffer);
-        stream.push(null);
+    if (file && file.size > 0) {
+      console.log('📌 Archivo adjunto detectado:', file.name, 'Tamaño:', file.size, 'bytes');
+      
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY) {
+        console.error('❌ Faltan credenciales de Google Service Account en Vercel.');
+      } else {
+        try {
+          const drive = getDriveService();
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const stream = new Readable();
+          stream.push(buffer);
+          stream.push(null);
 
-        const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+          const folderId = (process.env.GOOGLE_DRIVE_FOLDER_ID || '').trim().replace(/^["']|["']$/g, '');
+          console.log('📌 Subiendo archivo a Google Drive Folder ID:', folderId);
 
-        const driveResponse = await drive.files.create({
-          requestBody: {
-            name: `${Date.now()}_${file.name}`,
-            parents: folderId ? [folderId] : undefined,
-          },
-          media: {
-            mimeType: file.type || 'application/octet-stream',
-            body: stream,
-          },
-          fields: 'id, webViewLink, webContentLink',
-        });
-
-        driveFileUrl = driveResponse.data.webViewLink || driveResponse.data.webContentLink || '';
-        driveFileName = file.name;
-
-        // Dar permisos de lectura pública al archivo subido
-        if (driveResponse.data.id) {
-          await drive.permissions.create({
-            fileId: driveResponse.data.id,
+          const driveResponse = await drive.files.create({
             requestBody: {
-              role: 'reader',
-              type: 'anyone',
+              name: `${Date.now()}_${file.name}`,
+              parents: folderId ? [folderId] : undefined,
             },
+            media: {
+              mimeType: file.type || 'application/octet-stream',
+              body: stream,
+            },
+            fields: 'id, webViewLink, webContentLink',
           });
+
+          driveFileUrl = driveResponse.data.webViewLink || driveResponse.data.webContentLink || '';
+          driveFileName = file.name;
+          console.log('✅ Archivo subido con éxito a Google Drive:', driveFileUrl);
+
+          // Otorgar permisos de lectura pública si el archivo fue creado
+          if (driveResponse.data.id) {
+            await drive.permissions.create({
+              fileId: driveResponse.data.id,
+              requestBody: {
+                role: 'reader',
+                type: 'anyone',
+              },
+            });
+          }
+        } catch (driveErr) {
+          console.error('❌ Error subiendo archivo a Google Drive:', driveErr);
         }
-      } catch (driveErr) {
-        console.error('Error subiendo archivo a Google Drive:', driveErr);
       }
+    } else {
+      console.log('ℹ️ Solicitud sin archivo físico adjunto.');
     }
 
     // 3. Enviar correo formateado mediante Resend API
