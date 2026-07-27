@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone, FileRejection } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -30,10 +30,19 @@ interface ContactoFormProps {
 
 type RFQStep = 1 | 2 | 3 | 4;
 
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    turnstile?: any;
+  }
+}
+
 export default function ContactoForm({ formId }: ContactoFormProps) {
   const [step, setStep] = useState<RFQStep>(1);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [isQuickConsult, setIsQuickConsult] = useState<boolean>(false);
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
   
   // RFQ States
   const [selectedService, setSelectedService] = useState<string>('');
@@ -50,6 +59,8 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string>('');
   const [emailError, setEmailError] = useState<string>('');
+
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '0x4AAAAAAD-y4UBap3YNZjET';
 
   const services = [
     {
@@ -77,6 +88,39 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
       icon: Globe,
     },
   ];
+
+  // Cargar Turnstile Script dinámicamente al estar en el paso 4
+  useEffect(() => {
+    if (step === 4 && siteKey) {
+      const scriptId = 'cf-turnstile-script';
+      if (!document.getElementById(scriptId)) {
+        const script = document.createElement('script');
+        script.id = scriptId;
+        script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js';
+        script.async = true;
+        script.defer = true;
+        document.head.appendChild(script);
+      }
+
+      const timer = setTimeout(() => {
+        if (window.turnstile && turnstileContainerRef.current) {
+          try {
+            turnstileContainerRef.current.innerHTML = '';
+            window.turnstile.render(turnstileContainerRef.current, {
+              sitekey: siteKey,
+              callback: (token: string) => {
+                setTurnstileToken(token);
+              },
+            });
+          } catch (e) {
+            console.warn('Error renderizando Turnstile:', e);
+          }
+        }
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [step, siteKey]);
 
   // Handle inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -173,13 +217,16 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
     submissionData.append('Teléfono', formData.telefono);
     submissionData.append('Tipo de Solicitud', isQuickConsult ? 'Consulta Rápida / General' : 'Cotización RFQ');
     submissionData.append('Servicio Requerido', selectedService);
+    if (turnstileToken) {
+      submissionData.append('cf-turnstile-response', turnstileToken);
+    }
 
     if (isQuickConsult) {
       submissionData.append('Mensaje de Consulta', formData.descripcion);
     } else {
       submissionData.append('Área Estimada', formData.area || 'No especificada');
       submissionData.append('Presupuesto Estimado', formData.presupuesto || 'No especificado');
-      submissionData.append('Requerimientos Técnicos', formData.descripcion);
+      submissionData.append('Descripción Técnica', formData.descripcion);
       if (uploadedFile) {
         submissionData.append('Archivo Adjunto', uploadedFile);
         submissionData.append('Metadata Archivo', `${uploadedFile.name} (${(uploadedFile.size / 1024 / 1024).toFixed(2)} MB)`);
@@ -189,13 +236,9 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
     }
 
     try {
-      const endpoint = process.env.NEXT_PUBLIC_FORMSPREE_URL || (formId ? `https://formspree.io/f/${formId}` : 'https://formsubmit.co/ajax/contacto@mapzy.com.co');
-      const response = await fetch(endpoint, {
+      const response = await fetch('/api/contacto', {
         method: 'POST',
         body: submissionData,
-        headers: {
-          Accept: 'application/json',
-        },
       });
 
       if (response.ok) {
@@ -212,6 +255,7 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
           telefono: '',
         });
         setUploadedFile(null);
+        setTurnstileToken('');
         setStep(1);
       } else {
         setStatus('error');
@@ -635,6 +679,11 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
                             ></textarea>
                           </div>
                         )}
+
+                        {/* Cloudflare Turnstile Captcha Container */}
+                        <div className="flex justify-center my-4">
+                          <div ref={turnstileContainerRef}></div>
+                        </div>
 
                         {status === 'error' && (
                           <div className="p-4 bg-red-950/20 border border-red-500/20 rounded-2xl flex items-center gap-3 text-red-400 text-xs">
