@@ -24,10 +24,6 @@ import {
   AlertCircle
 } from 'lucide-react';
 
-interface ContactoFormProps {
-  formId?: string;
-}
-
 type RFQStep = 1 | 2 | 3 | 4;
 
 declare global {
