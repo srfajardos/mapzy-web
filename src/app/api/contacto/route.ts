@@ -2,50 +2,70 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
+import crypto from 'crypto';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Desempacador universal de credenciales Google Service Account (Base64, JSON o PEM directos)
+// Normalizador nativo OpenSSL 3.0 usando crypto.createPrivateKey
+function parsePrivateKeySafely(rawKey: string): string {
+  if (!rawKey) return '';
+  let key = rawKey.trim();
+
+  // Limpiar comillas si las incluye
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.substring(1, key.length - 1);
+  }
+
+  // Convertir secuencias escapadas a saltos reales \n
+  key = key.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
+
+  try {
+    // Usar el motor nativo de C++ crypto de Node.js para descompilar y normalizar la firma RSA
+    const keyObj = crypto.createPrivateKey({
+      key,
+      format: 'pem',
+    });
+    const exportedPem = keyObj.export({ type: 'pkcs8', format: 'pem' }).toString();
+    console.log('✅ Clave RSA procesada exitosamente con Node.js Crypto nativo.');
+    return exportedPem;
+  } catch (err) {
+    console.error('⚠️ Aviso: crypto.createPrivateKey fallo, usando formato respaldado:', err);
+    return key;
+  }
+}
+
+// Desempacador universal de credenciales Google Service Account
 function getGoogleCredentials() {
   const defaultEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
   let rawKey = (process.env.GOOGLE_PRIVATE_KEY || '').trim();
 
-  // Eliminar comillas si la variable las incluye
   if ((rawKey.startsWith('"') && rawKey.endsWith('"')) || (rawKey.startsWith("'") && rawKey.endsWith("'"))) {
     rawKey = rawKey.substring(1, rawKey.length - 1);
   }
 
-  // Opción 1: Si es una cadena Base64 (archivo JSON completo o key codificada en base64)
+  // Si viene en Base64 (JSON completo o key en base64)
   if (!rawKey.includes('-----BEGIN') && rawKey.length > 50) {
     try {
       const decodedText = Buffer.from(rawKey, 'base64').toString('utf-8');
       
-      // Si decodifica a un objeto JSON completo (como el .json de Google)
       if (decodedText.includes('{') && decodedText.includes('private_key')) {
         const jsonObj = JSON.parse(decodedText);
-        const parsedKey = (jsonObj.private_key || '').replace(/\\n/g, '\n');
         const parsedEmail = jsonObj.client_email || defaultEmail;
-        console.log('✅ Credenciales de Google decodificadas exitosamente desde JSON Base64.');
-        return { client_email: parsedEmail, private_key: parsedKey };
+        const normalizedKey = parsePrivateKeySafely(jsonObj.private_key || '');
+        console.log('✅ Credenciales de Google decodificadas desde JSON Base64.');
+        return { client_email: parsedEmail, private_key: normalizedKey };
       }
 
-      // Si decodifica directamente a un bloque PEM
       if (decodedText.includes('-----BEGIN')) {
-        console.log('✅ Llave PEM de Google decodificada exitosamente desde Base64.');
-        return { client_email: defaultEmail, private_key: decodedText.replace(/\\n/g, '\n') };
+        console.log('✅ Llave PEM decodificada desde Base64.');
+        return { client_email: defaultEmail, private_key: parsePrivateKeySafely(decodedText) };
       }
     } catch (err) {
-      console.warn('Aviso: Intento de decodificación Base64 falló, usando valor en texto plano:', err);
+      console.warn('Aviso: Fallo decodificación Base64:', err);
     }
   }
 
-  // Opción 2: Texto plano con saltos de línea escapados
-  const formattedKey = rawKey
-    .replace(/\\\\n/g, '\n')
-    .replace(/\\n/g, '\n')
-    .replace(/\r\n/g, '\n');
-
-  return { client_email: defaultEmail, private_key: formattedKey };
+  return { client_email: defaultEmail, private_key: parsePrivateKeySafely(rawKey) };
 }
 
 // Configuración de Google Drive Auth
