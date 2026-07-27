@@ -189,7 +189,7 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
     }
 
     try {
-      const endpoint = process.env.NEXT_PUBLIC_FORMSPREE_URL || (formId ? `https://formspree.io/f/${formId}` : 'https://formsubmit.co/ajax/srfajardos@gmail.com');
+      const endpoint = process.env.NEXT_PUBLIC_FORMSPREE_URL || (formId ? `https://formspree.io/f/${formId}` : 'https://formsubmit.co/ajax/contacto@mapzy.com.co');
       const response = await fetch(endpoint, {
         method: 'POST',
         body: submissionData,
@@ -271,7 +271,9 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
                   </div>
                   <div>
                     <p className="text-gray-400 text-xs uppercase font-bold tracking-wider">Correo Operaciones</p>
-                    <p className="font-bold text-sm">srfajardos@gmail.com</p>
+                    <a href="mailto:contacto@mapzy.com.co" className="font-bold text-sm text-white hover:text-yellow-400 transition-colors">
+                      contacto@mapzy.com.co
+                    </a>
                   </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -669,7 +671,7 @@ export default function ContactoForm({ formId }: ContactoFormProps) {
                         <button
                           type="submit"
                           disabled={status === 'loading'}
-                          className="flex-1 bg-yellow-400 text-[#1a2a44] p-4 rounded-xl font-bold hover:bg-yellow-300 transition-all shadow-[0_4px_20px_rgba(250,204,21,0.15)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="flex-1 bg-[#facc15] text-[#1a2a44] p-4 rounded-xl font-bold hover:bg-yellow-300 transition-all shadow-[0_4px_20px_rgba(250,204,21,0.15)] flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {status === 'loading' ? (
                             <>
