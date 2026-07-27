@@ -37,7 +37,7 @@ declare global {
   }
 }
 
-export default function ContactoForm({ formId }: ContactoFormProps) {
+export default function ContactoForm({ formId: _formId }: ContactoFormProps) {
   const [step, setStep] = useState<RFQStep>(1);
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [isQuickConsult, setIsQuickConsult] = useState<boolean>(false);

@@ -158,6 +158,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data: resendData });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error('Error procesando formulario:', error);
     return NextResponse.json({ error: error?.message || 'Error interno del servidor.' }, { status: 500 });
