@@ -5,28 +5,34 @@ import { Readable } from 'stream';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Formateador robusto de clave privada RSA para OpenSSL en Node.js de Vercel
+// Reformateador estricto PEM PKCS#8 para OpenSSL en Node.js Vercel
 function getFormattedPrivateKey(rawKey: string): string {
   if (!rawKey) return '';
   let key = rawKey.trim();
-  
-  // Remover comillas envolventes si Vercel las incluyó
+
+  // Remover comillas envolventes si las tiene
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.substring(1, key.length - 1);
   }
 
-  // Reemplazar secuencias literales \n por saltos de línea reales
-  key = key.replace(/\\n/g, '\n');
+  // Reemplazar saltos de línea escapados (simples y dobles)
+  key = key.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n');
 
-  // Asegurar formato PEM multilínea estándar
-  if (!key.includes('-----BEGIN PRIVATE KEY-----')) {
-    key = `-----BEGIN PRIVATE KEY-----\n${key}`;
-  }
-  if (!key.includes('-----END PRIVATE KEY-----')) {
-    key = `${key}\n-----END PRIVATE KEY-----`;
-  }
+  const header = '-----BEGIN PRIVATE KEY-----';
+  const footer = '-----END PRIVATE KEY-----';
 
-  return key;
+  // Extraer únicamente el cuerpo base64 eliminando encabezados y cualquier espacio/salto previo
+  const body = key
+    .replace(header, '')
+    .replace(footer, '')
+    .replace(/[^A-Za-z0-9+/=]/g, '');
+
+  if (!body) return rawKey;
+
+  // Reestructurar el cuerpo en líneas de 64 caracteres según estándar PEM
+  const formattedBody = body.match(/.{1,64}/g)?.join('\n') || body;
+
+  return `${header}\n${formattedBody}\n${footer}\n`;
 }
 
 // Configuración de Google Drive Auth con la cuenta de servicio
