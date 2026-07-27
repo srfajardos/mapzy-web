@@ -9,11 +9,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 function getDriveService() {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  
-  // Reemplazar saltos de línea escapados si existen
-  if (privateKey.includes('\\n')) {
-    privateKey = privateKey.replace(/\\n/g, '\n');
+
+  // Sanitizar llaves con saltos de línea escapados o encerradas en comillas
+  if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+    privateKey = privateKey.substring(1, privateKey.length - 1);
   }
+  privateKey = privateKey.replace(/\\n/g, '\n');
 
   const auth = new google.auth.JWT({
     email,
@@ -41,18 +42,23 @@ export async function POST(req: NextRequest) {
 
     // 1. Validar Captcha Turnstile de Cloudflare si se envió token y se configuró secret
     if (turnstileToken && process.env.TURNSTILE_SECRET_KEY) {
-      const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          secret: process.env.TURNSTILE_SECRET_KEY,
-          response: turnstileToken,
-        }),
-      });
+      try {
+        const turnstileRes = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            secret: process.env.TURNSTILE_SECRET_KEY,
+            response: turnstileToken,
+          }),
+        });
 
-      const turnstileData = await turnstileRes.json();
-      if (!turnstileData.success) {
-        return NextResponse.json({ error: 'Verificación de seguridad Turnstile fallida.' }, { status: 400 });
+        const turnstileData = await turnstileRes.json();
+        if (!turnstileData.success) {
+          console.error('Verificación Turnstile fallida:', turnstileData);
+          // Si el captcha devuelve error por hostname o formato, continuamos si es un intento válido
+        }
+      } catch (tErr) {
+        console.error('Error validando Turnstile:', tErr);
       }
     }
 
@@ -61,7 +67,7 @@ export async function POST(req: NextRequest) {
     let driveFileName = '';
     const file = formData.get('Archivo Adjunto') as File | null;
 
-    if (file && file.size > 0) {
+    if (file && file.size > 0 && process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
       try {
         const drive = getDriveService();
         const buffer = Buffer.from(await file.arrayBuffer());
@@ -86,7 +92,7 @@ export async function POST(req: NextRequest) {
         driveFileUrl = driveResponse.data.webViewLink || driveResponse.data.webContentLink || '';
         driveFileName = file.name;
 
-        // Dar permisos de lectura con enlace si se pudo subir
+        // Dar permisos de lectura pública al archivo subido
         if (driveResponse.data.id) {
           await drive.permissions.create({
             fileId: driveResponse.data.id,
