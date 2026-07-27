@@ -610,9 +610,10 @@ export default function EstadoColombianoTree() {
       const link = g.selectAll<SVGPathElement, CustomHierarchyNode>('path.link')
         .data(links, (d) => d.id || '');
 
-      const diagonal = d3.linkHorizontal<{ x: number; y: number }, { x: number; y: number }>()
-        .x((d) => d.y)
-        .y((d) => d.x);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const diagonal = d3.linkHorizontal<any, any>()
+        .x((d: { x: number; y: number }) => d.y)
+        .y((d: { x: number; y: number }) => d.x);
 
       const linkEnter = link.enter().insert('path', 'g')
         .attr('class', 'link')
