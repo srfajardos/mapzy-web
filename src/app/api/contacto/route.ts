@@ -2,79 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { google } from 'googleapis';
 import { Readable } from 'stream';
-import crypto from 'crypto';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Normalizador nativo OpenSSL 3.0 usando crypto.createPrivateKey
-function parsePrivateKeySafely(rawKey: string): string {
-  if (!rawKey) return '';
-  let key = rawKey.trim();
-
-  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
-    key = key.substring(1, key.length - 1);
-  }
-
-  key = key.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
-
-  try {
-    const keyObj = crypto.createPrivateKey({
-      key,
-      format: 'pem',
-    });
-    return keyObj.export({ type: 'pkcs8', format: 'pem' }).toString();
-  } catch (err) {
-    console.error('⚠️ Aviso: crypto.createPrivateKey fallo, usando formato respaldado:', err);
-    return key;
-  }
-}
-
-// Desempacador universal de credenciales Google Service Account
-function getGoogleCredentials() {
-  const defaultEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
-  let rawKey = (process.env.GOOGLE_PRIVATE_KEY || '').trim();
-
-  if ((rawKey.startsWith('"') && rawKey.endsWith('"')) || (rawKey.startsWith("'") && rawKey.endsWith("'"))) {
-    rawKey = rawKey.substring(1, rawKey.length - 1);
-  }
-
-  // Si viene en Base64 (JSON completo o key en base64)
-  if (!rawKey.includes('-----BEGIN') && rawKey.length > 50) {
-    try {
-      const decodedText = Buffer.from(rawKey, 'base64').toString('utf-8');
-      
-      if (decodedText.includes('{') && decodedText.includes('private_key')) {
-        const jsonObj = JSON.parse(decodedText);
-        const parsedEmail = jsonObj.client_email || defaultEmail;
-        const normalizedKey = parsePrivateKeySafely(jsonObj.private_key || '');
-        console.log('✅ Credenciales de Google decodificadas desde JSON Base64.');
-        return { client_email: parsedEmail, private_key: normalizedKey };
-      }
-
-      if (decodedText.includes('-----BEGIN')) {
-        console.log('✅ Llave PEM decodificada desde Base64.');
-        return { client_email: defaultEmail, private_key: parsePrivateKeySafely(decodedText) };
-      }
-    } catch (err) {
-      console.warn('Aviso: Fallo decodificación Base64:', err);
-    }
-  }
-
-  return { client_email: defaultEmail, private_key: parsePrivateKeySafely(rawKey) };
-}
-
-// Configuración de Google Drive Auth
+// Configuración de Google Drive Auth con OAuth 2.0 (Usa la cuota de tu cuenta personal de 5 TB)
 function getDriveService() {
-  const credentials = getGoogleCredentials();
+  const clientId = (process.env.GOOGLE_CLIENT_ID || '').trim().replace(/^["']|["']$/g, '');
+  const clientSecret = (process.env.GOOGLE_CLIENT_SECRET || '').trim().replace(/^["']|["']$/g, '');
+  const refreshToken = (process.env.GOOGLE_REFRESH_TOKEN || '').trim().replace(/^["']|["']$/g, '');
 
-  console.log('📌 Autenticando Google Drive - Email:', credentials.client_email, '| Key len:', credentials.private_key.length);
+  if (clientId && clientSecret && refreshToken) {
+    console.log('📌 Autenticando Google Drive vía OAuth 2.0 (Personal 5TB Drive)...');
+    const oauth2Client = new google.auth.OAuth2(
+      clientId,
+      clientSecret,
+      'https://developers.google.com/oauthplayground'
+    );
 
-  const auth = new google.auth.GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'],
-  });
+    oauth2Client.setCredentials({
+      refresh_token: refreshToken,
+    });
 
-  return google.drive({ version: 'v3', auth });
+    return google.drive({ version: 'v3', auth: oauth2Client });
+  }
+
+  throw new Error('Faltan las credenciales GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET o GOOGLE_REFRESH_TOKEN.');
 }
 
 export async function POST(req: NextRequest) {
@@ -116,7 +68,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Procesar Archivo GIS si viene adjunto y subirlo a Google Drive
+    // 2. Procesar Archivo GIS si viene adjunto y subirlo a Google Drive (Personal 5TB)
     let driveFileUrl = '';
     let driveFileName = '';
     const file = formData.get('Archivo Adjunto') as File | null;
@@ -124,50 +76,44 @@ export async function POST(req: NextRequest) {
     if (file && file.size > 0) {
       console.log('📌 Archivo adjunto detectado:', file.name, 'Tamaño:', file.size, 'bytes');
       
-      if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && !process.env.GOOGLE_PRIVATE_KEY) {
-        console.error('❌ Faltan credenciales de Google Service Account en Vercel.');
-      } else {
-        try {
-          const drive = getDriveService();
-          const buffer = Buffer.from(await file.arrayBuffer());
-          const stream = new Readable();
-          stream.push(buffer);
-          stream.push(null);
+      try {
+        const drive = getDriveService();
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const stream = new Readable();
+        stream.push(buffer);
+        stream.push(null);
 
-          const folderId = (process.env.GOOGLE_DRIVE_FOLDER_ID || '').trim().replace(/^["']|["']$/g, '');
-          console.log('📌 Subiendo archivo a Google Drive Folder ID:', folderId);
+        const folderId = (process.env.GOOGLE_DRIVE_FOLDER_ID || '').trim().replace(/^["']|["']$/g, '');
+        console.log('📌 Subiendo archivo a tu Google Drive Personal Folder ID:', folderId);
 
-          const driveResponse = await drive.files.create({
+        const driveResponse = await drive.files.create({
+          requestBody: {
+            name: `${Date.now()}_${file.name}`,
+            parents: folderId ? [folderId] : undefined,
+          },
+          media: {
+            mimeType: file.type || 'application/octet-stream',
+            body: stream,
+          },
+          fields: 'id, webViewLink, webContentLink',
+        });
+
+        driveFileUrl = driveResponse.data.webViewLink || driveResponse.data.webContentLink || '';
+        driveFileName = file.name;
+        console.log('✅ Archivo subido con ÉXITO TOTAL a tu Google Drive de 5 TB:', driveFileUrl);
+
+        // Otorgar permisos de lectura si el archivo fue creado
+        if (driveResponse.data.id) {
+          await drive.permissions.create({
+            fileId: driveResponse.data.id,
             requestBody: {
-              name: `${Date.now()}_${file.name}`,
-              parents: folderId ? [folderId] : undefined,
+              role: 'reader',
+              type: 'anyone',
             },
-            media: {
-              mimeType: file.type || 'application/octet-stream',
-              body: stream,
-            },
-            supportsAllDrives: true,
-            fields: 'id, webViewLink, webContentLink',
           });
-
-          driveFileUrl = driveResponse.data.webViewLink || driveResponse.data.webContentLink || '';
-          driveFileName = file.name;
-          console.log('✅ Archivo subido con éxito a Google Drive:', driveFileUrl);
-
-          // Otorgar permisos de lectura pública si el archivo fue creado
-          if (driveResponse.data.id) {
-            await drive.permissions.create({
-              fileId: driveResponse.data.id,
-              supportsAllDrives: true,
-              requestBody: {
-                role: 'reader',
-                type: 'anyone',
-              },
-            });
-          }
-        } catch (driveErr) {
-          console.error('❌ Error subiendo archivo a Google Drive:', driveErr);
         }
+      } catch (driveErr) {
+        console.error('❌ Error subiendo archivo a Google Drive:', driveErr);
       }
     } else {
       console.log('ℹ️ Solicitud sin archivo físico adjunto.');
@@ -203,7 +149,7 @@ export async function POST(req: NextRequest) {
 
           ${driveFileUrl ? `
             <div style="margin-top: 24px; padding: 16px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
-              <p style="margin: 0 0 8px 0; font-weight: bold; color: #1e40af; font-size: 14px;">📁 Archivo Cartográfico Adjunto (Google Drive):</p>
+              <p style="margin: 0 0 8px 0; font-weight: bold; color: #1e40af; font-size: 14px;">📁 Archivo Cartográfico Adjunto (Google Drive 5TB):</p>
               <p style="margin: 0 0 12px 0; font-size: 13px; color: #1d4ed8;">${driveFileName}</p>
               <a href="${driveFileUrl}" target="_blank" style="display: inline-block; background-color: #2563eb; color: #ffffff; font-weight: bold; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-size: 13px;">Ver y Descargar Archivo en Google Drive</a>
             </div>
