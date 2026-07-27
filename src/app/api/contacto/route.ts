@@ -11,23 +11,18 @@ function parsePrivateKeySafely(rawKey: string): string {
   if (!rawKey) return '';
   let key = rawKey.trim();
 
-  // Limpiar comillas si las incluye
   if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
     key = key.substring(1, key.length - 1);
   }
 
-  // Convertir secuencias escapadas a saltos reales \n
   key = key.replace(/\\\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n');
 
   try {
-    // Usar el motor nativo de C++ crypto de Node.js para descompilar y normalizar la firma RSA
     const keyObj = crypto.createPrivateKey({
       key,
       format: 'pem',
     });
-    const exportedPem = keyObj.export({ type: 'pkcs8', format: 'pem' }).toString();
-    console.log('✅ Clave RSA procesada exitosamente con Node.js Crypto nativo.');
-    return exportedPem;
+    return keyObj.export({ type: 'pkcs8', format: 'pem' }).toString();
   } catch (err) {
     console.error('⚠️ Aviso: crypto.createPrivateKey fallo, usando formato respaldado:', err);
     return key;
@@ -151,6 +146,7 @@ export async function POST(req: NextRequest) {
               mimeType: file.type || 'application/octet-stream',
               body: stream,
             },
+            supportsAllDrives: true,
             fields: 'id, webViewLink, webContentLink',
           });
 
@@ -162,6 +158,7 @@ export async function POST(req: NextRequest) {
           if (driveResponse.data.id) {
             await drive.permissions.create({
               fileId: driveResponse.data.id,
+              supportsAllDrives: true,
               requestBody: {
                 role: 'reader',
                 type: 'anyone',
