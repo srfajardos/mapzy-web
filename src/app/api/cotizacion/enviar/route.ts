@@ -105,7 +105,10 @@ export async function POST(req: Request) {
             </tr>
             <tr>
               <td style="padding: 10px 14px; font-weight: bold; color: #1a2a44; border-bottom: 1px solid #e2e8f0;">Servicio:</td>
-              <td style="padding: 10px 14px; color: #334155; border-bottom: 1px solid #e2e8f0;"><strong>${servicioNombre}</strong> (${hectareas} Hectáreas)</td>
+              <td style="padding: 10px 14px; color: #334155; border-bottom: 1px solid #e2e8f0;">
+                <strong>${servicioNombre}</strong> (${hectareas} Hectáreas)
+                ${servicioDescripcion ? `<div style="font-size: 11.5px; color: #64748b; margin-top: 2px;">${servicioDescripcion}</div>` : ''}
+              </td>
             </tr>
             <tr>
               <td style="padding: 10px 14px; font-weight: bold; color: #1a2a44;">Ubicación:</td>
