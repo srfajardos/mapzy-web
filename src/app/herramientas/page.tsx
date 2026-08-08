@@ -1,14 +1,21 @@
 import React from 'react';
 import Link from 'next/link';
-import { Map, Network, FileSpreadsheet, Activity, ChevronRight } from 'lucide-react';
+import { Map, Network, FileSpreadsheet, Activity, Calculator, ChevronRight } from 'lucide-react';
 
 export const metadata = {
   title: 'Herramientas Interactivas | Mapzy',
-  description: 'Gadgets interactivos, visores conceptuales, riesgo sísmico y matrices de evaluación para territorio y mapas.',
+  description: 'Gadgets interactivos, visores conceptuales, riesgo sísmico, cotizadores y matrices de evaluación para territorio y mapas.',
 };
 
 export default function HerramientasHubPage() {
   const herramientas = [
+    {
+      slug: 'cotizador',
+      titulo: 'Cotizador Interactivo de Topografía',
+      descripcion: 'Generador instantáneo de presupuestos de topografía, fotogrametría con dron y cubaje ANM con exportación a PDF.',
+      icono: Calculator,
+      tag: 'Herramienta Comercial'
+    },
     {
       slug: 'editor-mapas',
       titulo: 'Studio Editor de Mapas (Genesis)',
