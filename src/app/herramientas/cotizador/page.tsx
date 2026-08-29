@@ -184,6 +184,12 @@ export default function CotizadorTopografiaPage() {
   const precioFinalCalculado = precioBase - valorDescuento;
   const precioFinal = usarAjusteManual ? precioManual : precioFinalCalculado;
 
+  // Diferencia entre la tarifa cerrada y el valor de tarifa. Negativa es
+  // descuento, positiva es ajuste al alza por alcance adicional.
+  const ajusteManual = usarAjusteManual ? precioManual - precioBase : 0;
+  const ajustePercent =
+    precioBase > 0 ? Math.round((Math.abs(ajusteManual) / precioBase) * 100) : 0;
+
   const formatoCOP = (valor: number) => {
     if (isNaN(valor) || !isFinite(valor)) return '$ 0';
     return new Intl.NumberFormat('es-CO', {
@@ -301,6 +307,9 @@ export default function CotizadorTopografiaPage() {
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
+      // JPEG no tiene canal alfa: sin fondo explicito las zonas transparentes
+      // se revelan en negro al aplanar la imagen.
+      backgroundColor: '#ffffff',
       logging: false,
     });
 
@@ -311,7 +320,16 @@ export default function CotizadorTopografiaPage() {
       format: 'letter'
     });
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
+    // Encajar respetando la proporcion del canvas. Fijar 8.5x11 a la fuerza
+    // estira la cotizacion cuando su relacion de aspecto no es la de la carta.
+    const ANCHO_CARTA = 8.5;
+    const ALTO_CARTA = 11;
+    const escala = Math.min(ANCHO_CARTA / canvas.width, ALTO_CARTA / canvas.height);
+    const ancho = canvas.width * escala;
+    const alto = canvas.height * escala;
+    const margenIzquierdo = (ANCHO_CARTA - ancho) / 2;
+
+    pdf.addImage(imgData, 'JPEG', margenIzquierdo, 0, ancho, alto);
     const dataUri = pdf.output('datauristring');
     return dataUri;
   };
@@ -973,6 +991,19 @@ export default function CotizadorTopografiaPage() {
                             <td className="py-1.5 px-3 font-bold">Desc.</td>
                             <td className="py-1.5 px-3 italic" colSpan={2}>Descuento Comercial de Escala ({descuentoPercent}%)</td>
                             <td className="py-1.5 px-3 text-right font-bold">- {formatoCOP(valorDescuento)}</td>
+                          </tr>
+                        )}
+                        {usarAjusteManual && ajusteManual !== 0 && (
+                          <tr className={ajusteManual < 0 ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-800'}>
+                            <td className="py-1.5 px-3 font-bold">{ajusteManual < 0 ? 'Desc.' : 'Ajuste'}</td>
+                            <td className="py-1.5 px-3 italic" colSpan={2}>
+                              {ajusteManual < 0
+                                ? `Descuento Comercial Especial Acordado (${ajustePercent}%)`
+                                : `Ajuste por Alcance Adicional Acordado (${ajustePercent}%)`}
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-bold">
+                              {ajusteManual < 0 ? '- ' : '+ '}{formatoCOP(Math.abs(ajusteManual))}
+                            </td>
                           </tr>
                         )}
                       </tbody>
