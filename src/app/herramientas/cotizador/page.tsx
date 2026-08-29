@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useId, useRef } from 'react';
 import Link from 'next/link';
-import { Calculator, Printer, CheckCircle2, ChevronLeft, ShieldCheck, DollarSign, FileText, Lock, Key, Compass, Layers, LogOut, Copy, Check, Trash2, Download, FolderOpen, Send, Loader2, PenTool, RefreshCw, PlusCircle } from 'lucide-react';
+import { Calculator, Printer, CheckCircle2, ChevronLeft, ShieldCheck, DollarSign, FileText, Compass, Layers, Copy, Check, Trash2, Download, FolderOpen, Send, Loader2, PenTool, RefreshCw, PlusCircle } from 'lucide-react';
 
 interface ServicioOption {
   id: string;
@@ -87,7 +87,6 @@ const SERVICIOS: ServicioOption[] = [
 export default function CotizadorTopografiaPage() {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  const pinInputId = useId();
   const numCotizacionId = useId();
   const haInputId = useId();
   const descInputId = useId();
@@ -99,11 +98,6 @@ export default function CotizadorTopografiaPage() {
   const ubicacionInputId = useId();
   const proyectoInputId = useId();
   const trmInputId = useId();
-
-  // Autenticación por PIN
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [pinInput, setPinInput] = useState<string>('');
-  const [pinError, setPinError] = useState<boolean>(false);
 
   // Estados de la Cotización
   const [servicioSeleccionado, setServicioSeleccionado] = useState<ServicioOption>(SERVICIOS[2]);
@@ -138,11 +132,6 @@ export default function CotizadorTopografiaPage() {
 
   // Cargar sesión, TRM en vivo y Consecutivo desde localStorage al iniciar
   useEffect(() => {
-    const authSession = sessionStorage.getItem('mapzy_cotizador_auth');
-    if (authSession === 'true') {
-      setIsAuthenticated(true);
-    }
-
     const savedCounter = localStorage.getItem('mapzy_quote_counter');
     if (savedCounter) {
       const nextNum = parseInt(savedCounter, 10) + 1;
@@ -173,23 +162,6 @@ export default function CotizadorTopografiaPage() {
       })
       .catch(() => console.warn('Usando TRM por defecto'))
       .finally(() => setCargandoTRM(false));
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pinInput.trim() === '2326') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('mapzy_cotizador_auth', 'true');
-      setPinError(false);
-    } else {
-      setPinError(true);
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('mapzy_cotizador_auth');
-    setPinInput('');
   };
 
   const rawHa = parseFloat(hectareasInput) || 0;
@@ -470,61 +442,6 @@ export default function CotizadorTopografiaPage() {
     setTimeout(() => setCopiadoWs(false), 3000);
   };
 
-  // Pantalla de Bloqueo por PIN
-  if (!isAuthenticated) {
-    return (
-      <div className="bg-[#1a2a44] min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border-4 border-yellow-400 text-center flex flex-col justify-center items-center">
-          <div className="w-16 h-16 bg-[#1a2a44] text-yellow-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Lock size={32} />
-          </div>
-          <h1 className="text-2xl font-black text-[#1a2a44] mb-1">Acceso Restringido</h1>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-6">
-            Herramienta Comercial Mapzy S.A.S.
-          </p>
-
-          <form onSubmit={handleLogin} className="space-y-4 w-full text-left">
-            <div>
-              <label htmlFor={pinInputId} className="text-xs font-bold text-slate-700 block mb-1 text-center">
-                Ingresa la clave de acceso de Mapzy Tools:
-              </label>
-              <div className="relative">
-                <input
-                  id={pinInputId}
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="****"
-                  className="w-full px-4 py-3 pl-11 border border-slate-300 rounded-2xl text-center text-xl font-black tracking-[0.5em] text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                  autoFocus
-                />
-                <Key className="absolute left-4 top-3.5 text-slate-400" size={20} />
-              </div>
-              {pinError && (
-                <span className="text-xs text-red-600 font-bold block mt-2 text-center">
-                  Clave incorrecta. Intenta nuevamente.
-                </span>
-              )}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-yellow-400 hover:bg-yellow-300 text-[#1a2a44] font-black py-3.5 rounded-2xl transition-all shadow-md text-sm uppercase tracking-wider cursor-pointer"
-            >
-              Ingresar al Cotizador
-            </button>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 text-center w-full">
-            Mapzy S.A.S. — Bogotá D.C., Colombia
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
       {/* Estilos de Impresión Nativa Fallback */}
@@ -592,13 +509,6 @@ export default function CotizadorTopografiaPage() {
               className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-slate-700 font-bold px-4 py-3 rounded-2xl flex items-center gap-2 text-xs transition-all cursor-pointer"
             >
               <FolderOpen size={16} /> Historial ({historial.length})
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-red-200 border border-slate-700 font-bold px-3.5 py-3 rounded-2xl flex items-center gap-2 text-xs transition-all cursor-pointer"
-              title="Cerrar Sesión del Cotizador"
-            >
-              <LogOut size={16} /> Bloquear
             </button>
             <button
               onClick={descargarPDFDirecto}

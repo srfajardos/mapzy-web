@@ -12,6 +12,8 @@
     "@sanity/icons": "^3.1.2",
     "@sanity/image-url": "^2.1.1",
     "@sanity/vision": "^3.99.0",
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.112.4",
     "@types/d3": "^7.4.3",
     "d3": "^7.9.0",
     "framer-motion": "^12.42.2",
