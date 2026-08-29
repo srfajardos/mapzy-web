@@ -84,6 +84,15 @@ const SERVICIOS: ServicioOption[] = [
   }
 ];
 
+/**
+ * Deja solo digitos y elimina los ceros a la izquierda. Sin esto, escribir
+ * sobre un campo que muestra "0" produce "05": el cero no se borra nunca.
+ * Se conserva el "0" solitario y se permite el campo vacio para poder borrar.
+ */
+function soloDigitos(valor: string): string {
+  return valor.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+}
+
 export default function CotizadorTopografiaPage() {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
@@ -644,7 +653,7 @@ export default function CotizadorTopografiaPage() {
                   type="text"
                   inputMode="numeric"
                   value={hectareasInput}
-                  onChange={(e) => setHectareasInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => setHectareasInput(soloDigitos(e.target.value))}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-2xl text-lg font-black text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                   placeholder="Ej: 30"
                 />
@@ -694,7 +703,7 @@ export default function CotizadorTopografiaPage() {
                     inputMode="numeric"
                     value={descuentoInput}
                     disabled={usarAjusteManual}
-                    onChange={(e) => setDescuentoInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    onChange={(e) => setDescuentoInput(soloDigitos(e.target.value))}
                     className="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm font-bold text-green-700 focus:ring-2 focus:ring-green-400 focus:outline-none disabled:opacity-50"
                     placeholder="0"
                   />
@@ -720,11 +729,15 @@ export default function CotizadorTopografiaPage() {
                     <label htmlFor={manualInputId} className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
                       Valor Total Acordado (COP):
                     </label>
+                    {/* Se pinta desde el numero, asi que un cero a la izquierda nunca
+                        sobrevive al re-render. Vacio cuando vale 0 para poder borrarlo. */}
                     <input
                       id={manualInputId}
-                      type="number"
-                      value={precioManual}
-                      onChange={(e) => setPrecioManual(parseInt(e.target.value, 10) || 0)}
+                      type="text"
+                      inputMode="numeric"
+                      value={precioManual === 0 ? '' : String(precioManual)}
+                      onChange={(e) => setPrecioManual(parseInt(soloDigitos(e.target.value), 10) || 0)}
+                      placeholder="Ej: 4000000"
                       className="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm font-bold text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                     />
                   </div>

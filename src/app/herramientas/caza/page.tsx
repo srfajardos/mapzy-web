@@ -25,6 +25,12 @@ const ESTILO_NIVEL: Record<'A' | 'B' | 'C', string> = {
   C: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
+/** Deja solo digitos y quita ceros a la izquierda, para que escribir sobre un
+ * campo que muestra "0" no produzca "05". Permite vaciar el campo. */
+function soloDigitos(valor: string): string {
+  return valor.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+}
+
 function fechaCorta(iso: string): string {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -215,8 +221,8 @@ export default function ConsolaDeCazaPage() {
                   Publicado en los últimos (días)
                 </label>
                 <input
-                  id={diasId} type="number" min={1} max={365} value={dias}
-                  onChange={(e) => setDias(e.target.value)}
+                  id={diasId} type="text" inputMode="numeric" value={dias}
+                  onChange={(e) => setDias(soloDigitos(e.target.value))}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 />
               </div>
@@ -225,8 +231,8 @@ export default function ConsolaDeCazaPage() {
                   Monto mínimo (COP)
                 </label>
                 <input
-                  id={minId} type="number" min={0} step={1000000} value={montoMin}
-                  onChange={(e) => setMontoMin(e.target.value)} placeholder="0"
+                  id={minId} type="text" inputMode="numeric" value={montoMin}
+                  onChange={(e) => setMontoMin(soloDigitos(e.target.value))} placeholder="0"
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 />
               </div>
@@ -235,8 +241,8 @@ export default function ConsolaDeCazaPage() {
                   Monto máximo (COP)
                 </label>
                 <input
-                  id={maxId} type="number" min={0} step={1000000} value={montoMax}
-                  onChange={(e) => setMontoMax(e.target.value)} placeholder="Sin tope"
+                  id={maxId} type="text" inputMode="numeric" value={montoMax}
+                  onChange={(e) => setMontoMax(soloDigitos(e.target.value))} placeholder="Sin tope"
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                 />
               </div>
