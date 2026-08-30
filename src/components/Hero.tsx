@@ -2,7 +2,6 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion, Variants } from 'framer-motion';
 import FondoTopografico from '@/components/FondoTopografico';
 import { HERO_VIDEO, HERO_POSTER } from '@/data/medios';
 
@@ -17,26 +16,6 @@ export default function Hero({
   videoUrl = HERO_VIDEO,
   posterUrl = HERO_POSTER,
 }: HeroProps) {
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring', stiffness: 80, damping: 15 },
-    },
-  };
-
   return (
     <header id="inicio" className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden bg-[#1a2a44] py-10 sm:py-16 lg:py-20">
       {/*
@@ -69,37 +48,20 @@ export default function Hero({
       )}
 
       {/* Content */}
-      <motion.div
-        className="relative z-10 text-center px-4 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.span
-          className="text-yellow-400 font-bold uppercase tracking-widest text-xs mb-4 inline-block bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20"
-          variants={itemVariants}
-        >
+      <div className="relative z-10 text-center px-4 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl">
+        <span className="entrada-hero entrada-retraso-1 text-yellow-400 font-bold uppercase tracking-widest text-xs mb-4 inline-block bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
           Geociencias · Topografía · Medio Ambiente
-        </motion.span>
+        </span>
         
-        <motion.h1
-          className="text-4xl sm:text-5xl md:text-7xl 2xl:text-8xl font-extrabold text-white mb-6 leading-tight select-none"
-          variants={itemVariants}
-        >
+        <h1 className="entrada-hero entrada-retraso-2 text-4xl sm:text-5xl md:text-7xl 2xl:text-8xl font-extrabold text-white mb-6 leading-tight select-none">
           Mapeando Futuros <span className="text-yellow-400">Sostenibles</span>
-        </motion.h1>
+        </h1>
         
-        <motion.p
-          className="text-lg sm:text-xl md:text-2xl 2xl:text-3xl text-gray-200 mb-10 font-light italic max-w-2xl 2xl:max-w-3xl mx-auto"
-          variants={itemVariants}
-        >
+        <p className="entrada-hero entrada-retraso-3 text-lg sm:text-xl md:text-2xl 2xl:text-3xl text-gray-200 mb-10 font-light italic max-w-2xl 2xl:max-w-3xl mx-auto">
           &ldquo;Líderes en soluciones geoespaciales y desarrollo territorial de alta precisión en Colombia.&rdquo;
-        </motion.p>
+        </p>
         
-        <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-          variants={itemVariants}
-        >
+        <div className="entrada-hero entrada-retraso-4 flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/servicios"
             className="bg-yellow-400 text-[#1a2a44] px-8 py-4 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-all duration-300 transform hover:scale-105 shadow-[0_0_20px_rgba(253,224,71,0.2)] hover:shadow-[0_0_30px_rgba(253,224,71,0.4)] text-center"
@@ -112,8 +74,8 @@ export default function Hero({
           >
             Nuestros Proyectos
           </Link>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Scroll indicator */}
       <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 hidden sm:flex lg:flex flex-col items-center gap-2 pointer-events-none">
