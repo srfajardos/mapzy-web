@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Map, Network, FileSpreadsheet, Activity, Calculator, ChevronRight } from 'lucide-react';
+import { Map, Network, FileSpreadsheet, Activity, Calculator, Crosshair, ChevronRight } from 'lucide-react';
 
 export const metadata = {
   title: 'Herramientas Interactivas | Mapzy',
@@ -9,6 +9,13 @@ export const metadata = {
 
 export default function HerramientasHubPage() {
   const herramientas = [
+    {
+      slug: 'caza',
+      titulo: 'Consola de Caza (SECOP II)',
+      descripcion: 'Rastrea y califica automáticamente licitaciones públicas de topografía, geología y gestión del riesgo con puntaje de afinidad Mapzy.',
+      icono: Crosshair,
+      tag: 'Prospección B2B'
+    },
     {
       slug: 'cotizador',
       titulo: 'Cotizador Interactivo de Topografía',

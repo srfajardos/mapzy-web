@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useId, useRef } from 'react';
 import Link from 'next/link';
-import { Calculator, Printer, CheckCircle2, ChevronLeft, ShieldCheck, DollarSign, FileText, Lock, Key, Compass, Layers, LogOut, Copy, Check, Trash2, Download, FolderOpen, Send, Loader2, PenTool, RefreshCw, PlusCircle } from 'lucide-react';
+import { Calculator, Printer, CheckCircle2, ChevronLeft, ShieldCheck, DollarSign, FileText, Compass, Layers, Copy, Check, Trash2, Download, FolderOpen, Send, Loader2, PenTool, RefreshCw, PlusCircle } from 'lucide-react';
 
 interface ServicioOption {
   id: string;
@@ -84,10 +84,18 @@ const SERVICIOS: ServicioOption[] = [
   }
 ];
 
+/**
+ * Deja solo digitos y elimina los ceros a la izquierda. Sin esto, escribir
+ * sobre un campo que muestra "0" produce "05": el cero no se borra nunca.
+ * Se conserva el "0" solitario y se permite el campo vacio para poder borrar.
+ */
+function soloDigitos(valor: string): string {
+  return valor.replace(/[^0-9]/g, '').replace(/^0+(?=\d)/, '');
+}
+
 export default function CotizadorTopografiaPage() {
   const printAreaRef = useRef<HTMLDivElement>(null);
 
-  const pinInputId = useId();
   const numCotizacionId = useId();
   const haInputId = useId();
   const descInputId = useId();
@@ -99,11 +107,6 @@ export default function CotizadorTopografiaPage() {
   const ubicacionInputId = useId();
   const proyectoInputId = useId();
   const trmInputId = useId();
-
-  // Autenticación por PIN
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [pinInput, setPinInput] = useState<string>('');
-  const [pinError, setPinError] = useState<boolean>(false);
 
   // Estados de la Cotización
   const [servicioSeleccionado, setServicioSeleccionado] = useState<ServicioOption>(SERVICIOS[2]);
@@ -138,11 +141,6 @@ export default function CotizadorTopografiaPage() {
 
   // Cargar sesión, TRM en vivo y Consecutivo desde localStorage al iniciar
   useEffect(() => {
-    const authSession = sessionStorage.getItem('mapzy_cotizador_auth');
-    if (authSession === 'true') {
-      setIsAuthenticated(true);
-    }
-
     const savedCounter = localStorage.getItem('mapzy_quote_counter');
     if (savedCounter) {
       const nextNum = parseInt(savedCounter, 10) + 1;
@@ -175,23 +173,6 @@ export default function CotizadorTopografiaPage() {
       .finally(() => setCargandoTRM(false));
   };
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (pinInput.trim() === '2326') {
-      setIsAuthenticated(true);
-      sessionStorage.setItem('mapzy_cotizador_auth', 'true');
-      setPinError(false);
-    } else {
-      setPinError(true);
-    }
-  };
-
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    sessionStorage.removeItem('mapzy_cotizador_auth');
-    setPinInput('');
-  };
-
   const rawHa = parseFloat(hectareasInput) || 0;
   const hectareas = Math.min(1000000, Math.max(1, isNaN(rawHa) ? 1 : rawHa));
   const descuentoPercent = Math.min(50, Math.max(0, parseFloat(descuentoInput) || 0));
@@ -211,6 +192,12 @@ export default function CotizadorTopografiaPage() {
   const valorDescuento = Math.round(precioBase * (descuentoPercent / 100));
   const precioFinalCalculado = precioBase - valorDescuento;
   const precioFinal = usarAjusteManual ? precioManual : precioFinalCalculado;
+
+  // Diferencia entre la tarifa cerrada y el valor de tarifa. Negativa es
+  // descuento, positiva es ajuste al alza por alcance adicional.
+  const ajusteManual = usarAjusteManual ? precioManual - precioBase : 0;
+  const ajustePercent =
+    precioBase > 0 ? Math.round((Math.abs(ajusteManual) / precioBase) * 100) : 0;
 
   const formatoCOP = (valor: number) => {
     if (isNaN(valor) || !isFinite(valor)) return '$ 0';
@@ -329,6 +316,9 @@ export default function CotizadorTopografiaPage() {
     const canvas = await html2canvas(element, {
       scale: 2,
       useCORS: true,
+      // JPEG no tiene canal alfa: sin fondo explicito las zonas transparentes
+      // se revelan en negro al aplanar la imagen.
+      backgroundColor: '#ffffff',
       logging: false,
     });
 
@@ -339,7 +329,16 @@ export default function CotizadorTopografiaPage() {
       format: 'letter'
     });
 
-    pdf.addImage(imgData, 'JPEG', 0, 0, 8.5, 11);
+    // Encajar respetando la proporcion del canvas. Fijar 8.5x11 a la fuerza
+    // estira la cotizacion cuando su relacion de aspecto no es la de la carta.
+    const ANCHO_CARTA = 8.5;
+    const ALTO_CARTA = 11;
+    const escala = Math.min(ANCHO_CARTA / canvas.width, ALTO_CARTA / canvas.height);
+    const ancho = canvas.width * escala;
+    const alto = canvas.height * escala;
+    const margenIzquierdo = (ANCHO_CARTA - ancho) / 2;
+
+    pdf.addImage(imgData, 'JPEG', margenIzquierdo, 0, ancho, alto);
     const dataUri = pdf.output('datauristring');
     return dataUri;
   };
@@ -470,61 +469,6 @@ export default function CotizadorTopografiaPage() {
     setTimeout(() => setCopiadoWs(false), 3000);
   };
 
-  // Pantalla de Bloqueo por PIN
-  if (!isAuthenticated) {
-    return (
-      <div className="bg-[#1a2a44] min-h-screen flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border-4 border-yellow-400 text-center flex flex-col justify-center items-center">
-          <div className="w-16 h-16 bg-[#1a2a44] text-yellow-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <Lock size={32} />
-          </div>
-          <h1 className="text-2xl font-black text-[#1a2a44] mb-1">Acceso Restringido</h1>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-6">
-            Herramienta Comercial Mapzy S.A.S.
-          </p>
-
-          <form onSubmit={handleLogin} className="space-y-4 w-full text-left">
-            <div>
-              <label htmlFor={pinInputId} className="text-xs font-bold text-slate-700 block mb-1 text-center">
-                Ingresa la clave de acceso de Mapzy Tools:
-              </label>
-              <div className="relative">
-                <input
-                  id={pinInputId}
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={pinInput}
-                  onChange={(e) => setPinInput(e.target.value.replace(/[^0-9]/g, ''))}
-                  placeholder="****"
-                  className="w-full px-4 py-3 pl-11 border border-slate-300 rounded-2xl text-center text-xl font-black tracking-[0.5em] text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
-                  autoFocus
-                />
-                <Key className="absolute left-4 top-3.5 text-slate-400" size={20} />
-              </div>
-              {pinError && (
-                <span className="text-xs text-red-600 font-bold block mt-2 text-center">
-                  Clave incorrecta. Intenta nuevamente.
-                </span>
-              )}
-            </div>
-            <button
-              type="submit"
-              className="w-full bg-yellow-400 hover:bg-yellow-300 text-[#1a2a44] font-black py-3.5 rounded-2xl transition-all shadow-md text-sm uppercase tracking-wider cursor-pointer"
-            >
-              Ingresar al Cotizador
-            </button>
-          </form>
-
-          <div className="mt-6 pt-4 border-t border-slate-100 text-[10px] text-slate-400 text-center w-full">
-            Mapzy S.A.S. — Bogotá D.C., Colombia
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="bg-slate-50 min-h-screen pb-20">
       {/* Estilos de Impresión Nativa Fallback */}
@@ -592,13 +536,6 @@ export default function CotizadorTopografiaPage() {
               className="bg-slate-800 hover:bg-slate-700 text-yellow-400 border border-slate-700 font-bold px-4 py-3 rounded-2xl flex items-center gap-2 text-xs transition-all cursor-pointer"
             >
               <FolderOpen size={16} /> Historial ({historial.length})
-            </button>
-            <button
-              onClick={handleLogout}
-              className="bg-slate-800 hover:bg-red-900/50 text-slate-300 hover:text-red-200 border border-slate-700 font-bold px-3.5 py-3 rounded-2xl flex items-center gap-2 text-xs transition-all cursor-pointer"
-              title="Cerrar Sesión del Cotizador"
-            >
-              <LogOut size={16} /> Bloquear
             </button>
             <button
               onClick={descargarPDFDirecto}
@@ -716,7 +653,7 @@ export default function CotizadorTopografiaPage() {
                   type="text"
                   inputMode="numeric"
                   value={hectareasInput}
-                  onChange={(e) => setHectareasInput(e.target.value.replace(/[^0-9]/g, ''))}
+                  onChange={(e) => setHectareasInput(soloDigitos(e.target.value))}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-2xl text-lg font-black text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                   placeholder="Ej: 30"
                 />
@@ -766,7 +703,7 @@ export default function CotizadorTopografiaPage() {
                     inputMode="numeric"
                     value={descuentoInput}
                     disabled={usarAjusteManual}
-                    onChange={(e) => setDescuentoInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    onChange={(e) => setDescuentoInput(soloDigitos(e.target.value))}
                     className="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm font-bold text-green-700 focus:ring-2 focus:ring-green-400 focus:outline-none disabled:opacity-50"
                     placeholder="0"
                   />
@@ -792,11 +729,15 @@ export default function CotizadorTopografiaPage() {
                     <label htmlFor={manualInputId} className="text-[10px] font-bold uppercase text-slate-500 block mb-1">
                       Valor Total Acordado (COP):
                     </label>
+                    {/* Se pinta desde el numero, asi que un cero a la izquierda nunca
+                        sobrevive al re-render. Vacio cuando vale 0 para poder borrarlo. */}
                     <input
                       id={manualInputId}
-                      type="number"
-                      value={precioManual}
-                      onChange={(e) => setPrecioManual(parseInt(e.target.value, 10) || 0)}
+                      type="text"
+                      inputMode="numeric"
+                      value={precioManual === 0 ? '' : String(precioManual)}
+                      onChange={(e) => setPrecioManual(parseInt(soloDigitos(e.target.value), 10) || 0)}
+                      placeholder="Ej: 4000000"
                       className="w-full px-4 py-2 border border-slate-300 rounded-xl text-sm font-bold text-[#1a2a44] focus:ring-2 focus:ring-yellow-400 focus:outline-none"
                     />
                   </div>
@@ -1063,6 +1004,19 @@ export default function CotizadorTopografiaPage() {
                             <td className="py-1.5 px-3 font-bold">Desc.</td>
                             <td className="py-1.5 px-3 italic" colSpan={2}>Descuento Comercial de Escala ({descuentoPercent}%)</td>
                             <td className="py-1.5 px-3 text-right font-bold">- {formatoCOP(valorDescuento)}</td>
+                          </tr>
+                        )}
+                        {usarAjusteManual && ajusteManual !== 0 && (
+                          <tr className={ajusteManual < 0 ? 'bg-green-50 text-green-800' : 'bg-amber-50 text-amber-800'}>
+                            <td className="py-1.5 px-3 font-bold">{ajusteManual < 0 ? 'Desc.' : 'Ajuste'}</td>
+                            <td className="py-1.5 px-3 italic" colSpan={2}>
+                              {ajusteManual < 0
+                                ? `Descuento Comercial Especial Acordado (${ajustePercent}%)`
+                                : `Ajuste por Alcance Adicional Acordado (${ajustePercent}%)`}
+                            </td>
+                            <td className="py-1.5 px-3 text-right font-bold">
+                              {ajusteManual < 0 ? '- ' : '+ '}{formatoCOP(Math.abs(ajusteManual))}
+                            </td>
                           </tr>
                         )}
                       </tbody>
