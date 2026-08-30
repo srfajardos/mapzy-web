@@ -10,16 +10,21 @@
  * generado con la identidad de la marca. No hay ninguna foto de archivo.
  *
  * Para publicar material propio:
- *   1. Crear la carpeta `public/media/` en la raíz del proyecto.
- *   2. Dejar ahí el video (mp4, H.264, idealmente por debajo de 8 MB) y una
- *      imagen de póster del mismo encuadre.
- *   3. Escribir aquí las rutas, que se resuelven desde `public/`:
- *        export const HERO_VIDEO = '/media/sobrevuelo.mp4';
- *        export const HERO_POSTER = '/media/sobrevuelo.jpg';
+ *   1. Dejar los archivos en `public/media/hero/`.
+ *   2. Escribir aquí las rutas, que se resuelven desde `public/`:
+ *        export const HERO_VIDEO  = '/media/hero/sobrevuelo.mp4';
+ *        export const HERO_POSTER = '/media/hero/sobrevuelo.jpg';
  *
- * El póster se muestra mientras el video carga, así que conviene que sea el
- * primer fotograma o uno muy parecido.
+ * El póster se muestra mientras el video carga, y en pantallas pequeñas es lo
+ * único que se descarga: el video solo se sirve de `md` hacia arriba.
+ *
+ * Los comandos de conversión y los pesos objetivo están en
+ * `docs/GUIA_MEDIOS.md`.
  */
 
 export const HERO_VIDEO = '';
+
+/** Misma toma en WebM. Opcional: pesa cerca de un 40 % menos donde se admite. */
+export const HERO_VIDEO_WEBM = '';
+
 export const HERO_POSTER = '';

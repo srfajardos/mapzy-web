@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import FondoTopografico from '@/components/FondoTopografico';
-import { HERO_VIDEO, HERO_POSTER } from '@/data/medios';
+import { HERO_VIDEO, HERO_VIDEO_WEBM, HERO_POSTER } from '@/data/medios';
 
 interface HeroProps {
   /** Ruta del video de fondo. Por defecto, la configurada en data/medios.ts. */
@@ -24,14 +24,27 @@ export default function Hero({
       */}
       {videoUrl ? (
         <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+          {/*
+            En pantallas pequenas solo se sirve el poster. Con preload="none" y
+            display:none el navegador no descarga el video: quien entra con
+            datos moviles no paga megas por un fondo decorativo.
+          */}
+          {posterUrl && (
+            <div
+              className="absolute inset-0 bg-cover bg-center md:hidden"
+              style={{ backgroundImage: `url('${posterUrl}')` }}
+            />
+          )}
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="absolute inset-0 w-full h-full object-cover"
+            preload="none"
+            className="absolute inset-0 w-full h-full object-cover hidden md:block"
             poster={posterUrl || undefined}
           >
+            {HERO_VIDEO_WEBM && <source src={HERO_VIDEO_WEBM} type="video/webm" />}
             <source src={videoUrl} type="video/mp4" />
           </video>
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
