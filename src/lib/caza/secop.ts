@@ -1,18 +1,11 @@
-import { califica } from './calificador';
+import { califica, esNomina } from './calificador';
+import { buscaFamilia } from './tematica';
+import { SIN_DEPARTAMENTO } from './territorio';
 import type { FiltrosCaza, Prospecto, RespuestaCaza } from './tipos';
 
-const ENDPOINT = 'https://www.datos.gov.co/resource/p6dx-8zbt.json';
+export { MODALIDADES } from './modalidades';
 
-/**
- * Raíces de búsqueda enviadas a SECOP. Son deliberadamente amplias: el filtro
- * fino lo hace el calificador sobre el resultado. Buscar poco y puntuar mucho
- * sale más barato que pedirle a Socrata 70 condiciones LIKE.
- */
-const RAICES_BUSQUEDA = [
-  'TOPOGRAF', 'GEOLOG', 'GEOTECN', 'CATASTR', 'FOTOGRAMETR', 'BATIMETR',
-  'LIDAR', 'DRON', 'GESTION DEL RIESGO', 'AMENAZA', 'CARTOGRAF',
-  'HIDROGEOLOG', 'ORDENAMIENTO TERRITORIAL', 'GEORREFERENCIA',
-];
+const ENDPOINT = 'https://www.datos.gov.co/resource/p6dx-8zbt.json';
 
 const CAMPOS = [
   'id_del_proceso', 'referencia_del_proceso', 'entidad', 'departamento_entidad',
@@ -21,22 +14,64 @@ const CAMPOS = [
   'tipo_de_contrato', 'duracion', 'unidad_de_duracion', 'urlproceso',
 ].join(',');
 
-export const DEPARTAMENTOS_DISPONIBLES = [
-  'Tolima', 'Huila', 'Cundinamarca', 'Distrito Capital de Bogotá',
-  'Quindío', 'Caldas', 'Risaralda', 'Valle del Cauca', 'Meta', 'Boyacá',
-];
-
-/** Escapa comillas simples para SoQL. Sin esto, un nombre con apóstrofo rompe la consulta. */
+/** Escapa comillas simples para SoQL. Sin esto, un apóstrofo rompe la consulta. */
 function escapaSoql(valor: string): string {
   return valor.replace(/'/g, "''");
 }
 
-function clausulaTerminos(): string {
-  const condiciones = RAICES_BUSQUEDA.flatMap((raiz) => [
-    `upper(nombre_del_procedimiento) like '%${raiz}%'`,
-    `upper(descripci_n_del_procedimiento) like '%${raiz}%'`,
-  ]);
+/**
+ * Une las raíces de las familias activas con los términos propios del usuario.
+ * Si no queda ninguna, la consulta no filtra por texto y devuelve todo lo que
+ * pase por territorio y fecha.
+ */
+interface Patron {
+  texto: string;
+  /** true si debe aparecer como palabra suelta y no como fragmento. */
+  exacta: boolean;
+}
+
+function raicesActivas(filtros: FiltrosCaza): Patron[] {
+  const patrones: Patron[] = [];
+  for (const id of filtros.familias) {
+    const familia = buscaFamilia(id);
+    if (!familia) continue;
+    for (const r of familia.raices) patrones.push({ texto: r, exacta: false });
+    for (const g of familia.siglas) patrones.push({ texto: g, exacta: true });
+  }
+  for (const t of filtros.terminosPropios) patrones.push({ texto: t, exacta: false });
+
+  const vistos = new Set<string>();
+  return patrones.filter((p) => {
+    const clave = `${p.texto}|${p.exacta}`;
+    if (vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+}
+
+function clausulaTerminos(patrones: Patron[]): string | null {
+  if (patrones.length === 0) return null;
+  const condiciones = patrones.flatMap(({ texto, exacta }) => {
+    const r = escapaSoql(texto);
+    // Las siglas se rodean de espacios: sin eso, buscar SIG arrastra miles de
+    // filas con "Sigrid", "siguiente" o "asignacion" y agota el techo de la
+    // consulta antes de llegar a lo que importa.
+    const patron = exacta ? `% ${r} %` : `%${r}%`;
+    return [
+      `upper(nombre_del_procedimiento) like '${patron}'`,
+      `upper(descripci_n_del_procedimiento) like '${patron}'`,
+    ];
+  });
   return `(${condiciones.join(' OR ')})`;
+}
+
+function clausulaTerritorio(filtros: FiltrosCaza): string | null {
+  const lista: string[] = [...filtros.departamentos];
+  if (filtros.incluirSinDepartamento) lista.push(SIN_DEPARTAMENTO);
+  // Lista vacía significa toda Colombia: no se añade condición.
+  if (lista.length === 0) return null;
+  const valores = lista.map((d) => `'${escapaSoql(d)}'`).join(',');
+  return `departamento_entidad in(${valores})`;
 }
 
 function construyeWhere(filtros: FiltrosCaza): string {
@@ -44,20 +79,22 @@ function construyeWhere(filtros: FiltrosCaza): string {
     .toISOString()
     .slice(0, 19);
 
-  const partes: string[] = [
+  const partes: (string | null)[] = [
     `fecha_de_publicacion_del > '${desde}'`,
     `estado_de_apertura_del_proceso='Abierto'`,
-    clausulaTerminos(),
+    clausulaTerritorio(filtros),
+    clausulaTerminos(raicesActivas(filtros)),
   ];
 
-  if (filtros.departamentos.length > 0) {
-    const lista = filtros.departamentos.map((d) => `'${escapaSoql(d)}'`).join(',');
-    partes.push(`departamento_entidad in(${lista})`);
-  }
   if (filtros.montoMin > 0) partes.push(`precio_base >= ${Math.round(filtros.montoMin)}`);
   if (filtros.montoMax > 0) partes.push(`precio_base <= ${Math.round(filtros.montoMax)}`);
 
-  return partes.join(' AND ');
+  if (filtros.modalidades.length > 0) {
+    const valores = filtros.modalidades.map((m) => `'${escapaSoql(m)}'`).join(',');
+    partes.push(`modalidad_de_contratacion in(${valores})`);
+  }
+
+  return partes.filter((p): p is string => Boolean(p)).join(' AND ');
 }
 
 interface FilaSecop {
@@ -82,14 +119,24 @@ function extraeUrl(campo: FilaSecop['urlproceso']): string {
   return campo?.url ?? '';
 }
 
-function aProspecto(fila: FilaSecop): Prospecto {
+function aProspecto(fila: FilaSecop, filtros: FiltrosCaza): Prospecto {
   const objeto = fila.nombre_del_procedimiento || fila.descripci_n_del_procedimiento || '';
   const precioBase = Number(fila.precio_base ?? 0) || 0;
-  const departamento = fila.departamento_entidad ?? 'No definido';
+  const departamento = fila.departamento_entidad ?? SIN_DEPARTAMENTO;
   const modalidad = fila.modalidad_de_contratacion ?? 'No definida';
   const fechaPublicacion = fila.fecha_de_publicacion_del ?? '';
 
-  const calificacion = califica({ objeto, precioBase, departamento, modalidad, fechaPublicacion });
+  const calificacion = califica({
+    objeto,
+    precioBase,
+    departamento,
+    modalidad,
+    fechaPublicacion,
+    familias: filtros.familias,
+    terminosPropios: filtros.terminosPropios,
+    baseOperacion: filtros.baseOperacion,
+    intensidadCercania: filtros.intensidadCercania,
+  });
 
   return {
     id: fila.id_del_proceso ?? '',
@@ -116,14 +163,14 @@ export async function cazaProspectos(filtros: FiltrosCaza): Promise<RespuestaCaz
     $select: CAMPOS,
     $where: construyeWhere(filtros),
     $order: 'fecha_de_publicacion_del DESC',
-    $limit: '1000',
+    $limit: String(filtros.limite),
   });
 
   const inicio = Date.now();
   const respuesta = await fetch(`${ENDPOINT}?${params}`, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
-    signal: AbortSignal.timeout(45_000),
+    signal: AbortSignal.timeout(60_000),
   });
   const latenciaMs = Date.now() - inicio;
 
@@ -136,13 +183,21 @@ export async function cazaProspectos(filtros: FiltrosCaza): Promise<RespuestaCaz
   const umbral = ORDEN_NIVEL[filtros.nivelMinimo];
 
   const prospectos = filas
-    .map(aProspecto)
+    .filter((f) => {
+      if (filtros.incluirNomina) return true;
+      const objeto = f.nombre_del_procedimiento || f.descripci_n_del_procedimiento || '';
+      return !esNomina(objeto);
+    })
+    .map((f) => aProspecto(f, filtros))
     .filter((p) => ORDEN_NIVEL[p.nivel] <= umbral)
     .sort((a, b) => b.puntaje - a.puntaje || b.fechaPublicacion.localeCompare(a.fechaPublicacion));
 
   return {
     prospectos,
     total: filas.length,
+    // SECOP devolvió justo el tope: hay más procesos que no llegaron a verse.
+    truncado: filas.length >= filtros.limite,
+    limite: filtros.limite,
     consultadoEn: new Date().toISOString(),
     latenciaMs,
   };
