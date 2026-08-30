@@ -38,7 +38,7 @@ export default function Hero({
   };
 
   return (
-    <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#1a2a44]">
+    <header id="inicio" className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden bg-[#1a2a44] py-10 sm:py-16 lg:py-20">
       {/*
         Fondo, en orden de preferencia: video propio, imagen propia, o el
         patron cartografico generado. Nunca fotografia de banco.
@@ -70,7 +70,7 @@ export default function Hero({
 
       {/* Content */}
       <motion.div
-        className="relative z-10 text-center px-4 max-w-4xl"
+        className="relative z-10 text-center px-4 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -83,14 +83,14 @@ export default function Hero({
         </motion.span>
         
         <motion.h1
-          className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight select-none"
+          className="text-4xl sm:text-5xl md:text-7xl 2xl:text-8xl font-extrabold text-white mb-6 leading-tight select-none"
           variants={itemVariants}
         >
           Mapeando Futuros <span className="text-yellow-400">Sostenibles</span>
         </motion.h1>
         
         <motion.p
-          className="text-xl md:text-2xl text-gray-200 mb-10 font-light italic max-w-2xl mx-auto"
+          className="text-lg sm:text-xl md:text-2xl 2xl:text-3xl text-gray-200 mb-10 font-light italic max-w-2xl 2xl:max-w-3xl mx-auto"
           variants={itemVariants}
         >
           &ldquo;Líderes en soluciones geoespaciales y desarrollo territorial de alta precisión en Colombia.&rdquo;
@@ -116,7 +116,7 @@ export default function Hero({
       </motion.div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 hidden sm:flex flex-col items-center gap-2">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 hidden sm:flex lg:flex flex-col items-center gap-2 pointer-events-none">
         <span className="text-white/60 text-xs uppercase tracking-widest">Desliza para explorar</span>
         <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center p-1.5">
           <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce"></div>

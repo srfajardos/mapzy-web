@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export const metadata = {
-  title: 'Blog y Artículos | Mapzy - Tecnología Geoespacial y Sostenibilidad',
+  title: 'Blog y Artículos',
   description: 'Mantente al día con nuestras publicaciones sobre gemelos digitales, minería sostenible, geología y sistemas de información geográfica en Colombia.',
 };
 

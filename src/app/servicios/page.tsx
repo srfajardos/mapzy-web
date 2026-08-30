@@ -4,7 +4,7 @@ import { Database, Leaf, Zap, Globe, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Servicios | Mapzy - Ingeniería, Topografía y Consultoría Ambiental',
+  title: 'Servicios',
   description: 'Explora nuestros servicios técnicos especializados en geología, cartografía SIG, licencias ambientales y ordenamiento territorial en Colombia.',
 };
 

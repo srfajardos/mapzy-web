@@ -6,7 +6,7 @@ import PortafolioFiltrable, { type ProyectoResumen } from '@/components/Portafol
 export const revalidate = 60;
 
 export const metadata = {
-  title: 'Proyectos | Mapzy',
+  title: 'Proyectos',
   description:
     'Portafolio de proyectos de geología, topografía, geomática y consultoría ambiental ejecutados por Mapzy S.A.S. en Colombia. Filtra por sector industrial.',
 };

@@ -8,32 +8,39 @@ import React from 'react';
  * un patrón abstracto propio no finge ser una operación de campo que no se
  * está mostrando, y además dice de qué trabaja la firma.
  *
- * Es SVG puro, sin peticiones de red ni imágenes que descargar.
+ * Es SVG y CSS, sin peticiones de red ni imágenes que descargar.
+ *
+ * La retícula va en CSS y no dentro del SVG a propósito: el SVG se escala con
+ * `slice` para cubrir el contenedor, así que un patrón definido ahí crecía
+ * hasta celdas de 128 px en un monitor de 2560 y parecía una hoja de cálculo.
+ * En CSS mantiene 56 px reales en cualquier pantalla.
  */
 export default function FondoTopografico() {
   // Curvas concéntricas irregulares, como las de un cerro en un plano.
-  const curvas = Array.from({ length: 9 }, (_, i) => {
-    const escala = 1 + i * 0.34;
-    const opacidad = 0.26 - i * 0.022;
-    return { escala, opacidad, key: `curva-${i}` };
-  });
+  const curvas = Array.from({ length: 9 }, (_, i) => ({
+    escala: 1 + i * 0.34,
+    opacidad: 0.26 - i * 0.022,
+    key: `curva-${i}`,
+  }));
 
   return (
     <div className="absolute inset-0 z-0 overflow-hidden bg-[#1a2a44]" aria-hidden="true">
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            'linear-gradient(to right, rgba(250,204,21,0.07) 1px, transparent 1px),' +
+            'linear-gradient(to bottom, rgba(250,204,21,0.07) 1px, transparent 1px)',
+          backgroundSize: '56px 56px',
+        }}
+      />
+
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 1200 800"
         preserveAspectRatio="xMidYMid slice"
         xmlns="http://www.w3.org/2000/svg"
       >
-        <defs>
-          <pattern id="reticula" width="60" height="60" patternUnits="userSpaceOnUse">
-            <path d="M60 0 L0 0 0 60" fill="none" stroke="#facc15" strokeWidth="0.5" opacity="0.07" />
-          </pattern>
-        </defs>
-
-        <rect width="1200" height="800" fill="url(#reticula)" />
-
         {/* Macizo principal, desplazado a la derecha para no competir con el texto */}
         <g transform="translate(880 380)">
           {curvas.map(({ escala, opacidad, key }) => (
@@ -43,6 +50,7 @@ export default function FondoTopografico() {
               fill="none"
               stroke="#facc15"
               strokeWidth="1.2"
+              vectorEffect="non-scaling-stroke"
               opacity={opacidad}
               transform={`scale(${escala})`}
             />
@@ -58,6 +66,7 @@ export default function FondoTopografico() {
               fill="none"
               stroke="#94a3b8"
               strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
               opacity={opacidad * 0.7}
               transform={`scale(${escala})`}
             />
