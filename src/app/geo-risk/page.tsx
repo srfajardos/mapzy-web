@@ -2,7 +2,7 @@ import React from 'react';
 import GeoRiskMap from '@/components/GeoRiskMap';
 
 export const metadata = {
-  title: 'GeoRisk Monitor | Mapzy Geoespacial',
+  title: 'GeoRisk Monitor',
   description: 'Portal de inteligencia de riesgos sismológicos y vulnerabilidad vial en Colombia.',
 };
 

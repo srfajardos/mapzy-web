@@ -1,5 +1,6 @@
 import React from 'react';
 import Hero from '@/components/Hero';
+import Indicadores from '@/components/Indicadores';
 import Services from '@/components/Services';
 import Projects, { Project } from '@/components/Projects';
 import Team from '@/components/Team';
@@ -25,7 +26,7 @@ export default async function Home() {
         nombre: p.title,
         categoria: p.sector,
         descripcion: p.description,
-        imagen: p.mainImage ? urlFor(p.mainImage).url() : 'https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&q=80&w=500',
+        imagen: p.mainImage ? urlFor(p.mainImage).url() : '/media/marcador-mapzy.svg',
       }));
     }
   } catch {
@@ -34,7 +35,8 @@ export default async function Home() {
 
   return (
     <>
-      <Hero videoUrl="" />
+      <Hero />
+      <Indicadores />
       <Services />
       <Projects projects={projects} />
       <Team />

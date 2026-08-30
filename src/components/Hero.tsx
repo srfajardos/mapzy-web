@@ -2,98 +2,79 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion, Variants } from 'framer-motion';
+import FondoTopografico from '@/components/FondoTopografico';
+import { HERO_VIDEO, HERO_VIDEO_WEBM, HERO_POSTER } from '@/data/medios';
 
 interface HeroProps {
+  /** Ruta del video de fondo. Por defecto, la configurada en data/medios.ts. */
   videoUrl?: string;
-  fallbackImageUrl?: string;
+  /** Imagen de póster del video, o imagen de fondo si no hay video. */
+  posterUrl?: string;
 }
 
 export default function Hero({
-  videoUrl,
-  fallbackImageUrl = 'https://images.unsplash.com/photo-1486787284432-3749cdce2660?q=80&w=1631&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  videoUrl = HERO_VIDEO,
+  posterUrl = HERO_POSTER,
 }: HeroProps) {
-  const containerVariants: Variants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
-    },
-  };
-
-  const itemVariants: Variants = {
-    hidden: { opacity: 0, y: 30 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { type: 'spring', stiffness: 80, damping: 15 },
-    },
-  };
-
   return (
-    <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#1a2a44]">
-      {/* Background Media */}
+    <header id="inicio" className="relative min-h-[calc(100vh-5rem)] flex items-center justify-center overflow-hidden bg-[#1a2a44] py-10 sm:py-16 lg:py-20">
+      {/*
+        Fondo, en orden de preferencia: video propio, imagen propia, o el
+        patron cartografico generado. Nunca fotografia de banco.
+      */}
       {videoUrl ? (
         <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
+          {/*
+            En pantallas pequenas solo se sirve el poster. Con preload="none" y
+            display:none el navegador no descarga el video: quien entra con
+            datos moviles no paga megas por un fondo decorativo.
+          */}
+          {posterUrl && (
+            <div
+              className="absolute inset-0 bg-cover bg-center md:hidden"
+              style={{ backgroundImage: `url('${posterUrl}')` }}
+            />
+          )}
           <video
             autoPlay
             loop
             muted
             playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-            poster={fallbackImageUrl}
+            preload="none"
+            className="absolute inset-0 w-full h-full object-cover hidden md:block"
+            poster={posterUrl || undefined}
           >
+            {HERO_VIDEO_WEBM && <source src={HERO_VIDEO_WEBM} type="video/webm" />}
             <source src={videoUrl} type="video/mp4" />
-            Tu navegador no soporta videos.
           </video>
-          {/* Overlay to ensure readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
+        </div>
+      ) : posterUrl ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center z-0"
+          style={{ backgroundImage: `url('${posterUrl}')` }}
+        >
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
         </div>
       ) : (
-        <div
-          className="absolute inset-0 bg-cover bg-center z-0"
-          style={{ backgroundImage: `url('${fallbackImageUrl}')` }}
-        >
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
-        </div>
+        <FondoTopografico />
       )}
 
       {/* Content */}
-      <motion.div
-        className="relative z-10 text-center px-4 max-w-4xl"
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <motion.span
-          className="text-yellow-400 font-bold uppercase tracking-widest text-xs mb-4 inline-block bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20"
-          variants={itemVariants}
-        >
+      <div className="relative z-10 text-center px-4 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl">
+        <span className="entrada-hero entrada-retraso-1 text-yellow-400 font-bold uppercase tracking-widest text-xs mb-4 inline-block bg-yellow-400/10 px-3 py-1 rounded-full border border-yellow-400/20">
           Geociencias · Topografía · Medio Ambiente
-        </motion.span>
+        </span>
         
-        <motion.h1
-          className="text-5xl md:text-7xl font-extrabold text-white mb-6 leading-tight select-none"
-          variants={itemVariants}
-        >
+        <h1 className="entrada-hero entrada-retraso-2 text-4xl sm:text-5xl md:text-7xl 2xl:text-8xl font-extrabold text-white mb-6 leading-tight select-none">
           Mapeando Futuros <span className="text-yellow-400">Sostenibles</span>
-        </motion.h1>
+        </h1>
         
-        <motion.p
-          className="text-xl md:text-2xl text-gray-200 mb-10 font-light italic max-w-2xl mx-auto"
-          variants={itemVariants}
-        >
+        <p className="entrada-hero entrada-retraso-3 text-lg sm:text-xl md:text-2xl 2xl:text-3xl text-gray-200 mb-10 font-light italic max-w-2xl 2xl:max-w-3xl mx-auto">
           &ldquo;Líderes en soluciones geoespaciales y desarrollo territorial de alta precisión en Colombia.&rdquo;
-        </motion.p>
+        </p>
         
-        <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-          variants={itemVariants}
-        >
+        <div className="entrada-hero entrada-retraso-4 flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/servicios"
             className="bg-yellow-400 text-[#1a2a44] px-8 py-4 rounded-xl font-bold text-lg hover:bg-yellow-300 transition-all duration-300 transform hover:scale-105 shadow-[0_0_20px_rgba(253,224,71,0.2)] hover:shadow-[0_0_30px_rgba(253,224,71,0.4)] text-center"
@@ -106,11 +87,11 @@ export default function Hero({
           >
             Nuestros Proyectos
           </Link>
-        </motion.div>
-      </motion.div>
+        </div>
+      </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 hidden sm:flex flex-col items-center gap-2">
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10 hidden sm:flex lg:flex flex-col items-center gap-2 pointer-events-none">
         <span className="text-white/60 text-xs uppercase tracking-widest">Desliza para explorar</span>
         <div className="w-6 h-10 border-2 border-white/30 rounded-full flex justify-center p-1.5">
           <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-bounce"></div>

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Map, Network, FileSpreadsheet, Activity, Calculator, Crosshair, ChevronRight } from 'lucide-react';
 
 export const metadata = {
-  title: 'Herramientas Interactivas | Mapzy',
+  title: 'Herramientas Interactivas',
   description: 'Gadgets interactivos, visores conceptuales, riesgo sísmico, cotizadores y matrices de evaluación para territorio y mapas.',
 };
 

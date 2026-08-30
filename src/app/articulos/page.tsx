@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 
 export const metadata = {
-  title: 'Artículos y Documentos | Mapzy',
+  title: 'Artículos y Documentos',
   description: 'Publicaciones editoriales y marcos estratégicos sobre derecho, tecnología y gestión del riesgo en Colombia.',
 };
 

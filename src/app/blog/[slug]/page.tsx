@@ -84,7 +84,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const content = post.body || [];
   const image = (post.mainImage && post.mainImage.asset)
     ? urlFor(post.mainImage).url()
-    : 'https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&q=80&w=600';
+    : '/media/marcador-mapzy.svg';
 
   return (
     <article className="py-12 bg-white min-h-screen">

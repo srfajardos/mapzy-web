@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500" role="img" aria-label="Mapzy">
+  <!-- Marcador de la marca para contenidos sin imagen propia. Sustituye a las
+       fotografias de banco, que el analisis UX del sector identifica como
+       senal de desconfianza ante un lector tecnico. -->
+  <defs>
+    <pattern id="r" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0 L0 0 0 40" fill="none" stroke="#facc15" stroke-width="0.5" opacity="0.10"/>
+    </pattern>
+  </defs>
+  <rect width="800" height="500" fill="#1a2a44"/>
+  <rect width="800" height="500" fill="url(#r)"/>
+  <g transform="translate(400 250)" fill="none" stroke="#facc15" stroke-width="1.4">
+    <path d="M0,-46 C38,-46 63,-25 63,4 C63,33 38,51 0,51 C-38,51 -66,33 -66,4 C-66,-25 -38,-46 0,-46 Z" opacity="0.42"/>
+    <path d="M0,-46 C38,-46 63,-25 63,4 C63,33 38,51 0,51 C-38,51 -66,33 -66,4 C-66,-25 -38,-46 0,-46 Z" opacity="0.30" transform="scale(1.8)"/>
+    <path d="M0,-46 C38,-46 63,-25 63,4 C63,33 38,51 0,51 C-38,51 -66,33 -66,4 C-66,-25 -38,-46 0,-46 Z" opacity="0.20" transform="scale(2.6)"/>
+    <path d="M0,-46 C38,-46 63,-25 63,4 C63,33 38,51 0,51 C-38,51 -66,33 -66,4 C-66,-25 -38,-46 0,-46 Z" opacity="0.12" transform="scale(3.4)"/>
+  </g>
+  <text x="400" y="262" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="30" font-weight="800" fill="#facc15" letter-spacing="7">MAPZY</text>
+</svg>

@@ -1,9 +1,10 @@
 import React from 'react';
+import FondoTopografico from '@/components/FondoTopografico';
 import { Database, Leaf, Zap, Globe, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
 
 export const metadata = {
-  title: 'Servicios | Mapzy - Ingeniería, Topografía y Consultoría Ambiental',
+  title: 'Servicios',
   description: 'Explora nuestros servicios técnicos especializados en geología, cartografía SIG, licencias ambientales y ordenamiento territorial en Colombia.',
 };
 
@@ -63,7 +64,7 @@ export default function ServiciosPage() {
     <div className="bg-white pb-16">
       {/* Header Section */}
       <div className="bg-[#1a2a44] text-white py-20 px-4 mb-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1486787284432-3749cdce2660?q=80&w=1631')" }}></div>
+        <div className="absolute inset-0 opacity-25"><FondoTopografico /></div>
         <div className="relative z-10 max-w-7xl mx-auto text-center">
           <span className="text-yellow-400 font-bold uppercase tracking-widest text-sm mb-3 inline-block">Portafolio Técnico</span>
           <h1 className="text-4xl md:text-6xl font-black mb-6">Nuestros Servicios</h1>

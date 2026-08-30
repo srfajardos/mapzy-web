@@ -11,3 +11,45 @@ body {
   color: var(--foreground);
   background: var(--background);
 }
+
+/*
+ * Entrada del hero en CSS y no en JavaScript.
+ *
+ * Antes el titular, la bajada y los botones se servian con opacity:0 en el
+ * atributo style y dependian de que framer-motion los revelara. Si esa
+ * animacion no llegaba a correr -movil lento, hidratacion fallida, pestana en
+ * segundo plano al cargar- el hero quedaba en blanco sobre el fondo, que es
+ * justo lo que se veia como un recuadro oscuro en celular.
+ *
+ * Con keyframes el estado final lo garantiza el navegador: aunque el
+ * JavaScript no llegue nunca, `animation-fill-mode: both` deja el contenido
+ * visible. La animacion es adorno, no requisito para leer la pagina.
+ */
+@keyframes mapzy-entrada {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrada-hero {
+  animation: mapzy-entrada 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.entrada-retraso-1 { animation-delay: 0.10s; }
+.entrada-retraso-2 { animation-delay: 0.22s; }
+.entrada-retraso-3 { animation-delay: 0.34s; }
+.entrada-retraso-4 { animation-delay: 0.46s; }
+
+/* Quien pidio menos movimiento ve el contenido de inmediato, sin desplazamiento. */
+@media (prefers-reduced-motion: reduce) {
+  .entrada-hero {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
