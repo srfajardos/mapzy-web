@@ -3,15 +3,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion, Variants } from 'framer-motion';
+import FondoTopografico from '@/components/FondoTopografico';
+import { HERO_VIDEO, HERO_POSTER } from '@/data/medios';
 
 interface HeroProps {
+  /** Ruta del video de fondo. Por defecto, la configurada en data/medios.ts. */
   videoUrl?: string;
-  fallbackImageUrl?: string;
+  /** Imagen de póster del video, o imagen de fondo si no hay video. */
+  posterUrl?: string;
 }
 
 export default function Hero({
-  videoUrl,
-  fallbackImageUrl = 'https://images.unsplash.com/photo-1486787284432-3749cdce2660?q=80&w=1631&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+  videoUrl = HERO_VIDEO,
+  posterUrl = HERO_POSTER,
 }: HeroProps) {
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
@@ -35,7 +39,10 @@ export default function Hero({
 
   return (
     <header id="inicio" className="relative h-screen flex items-center justify-center overflow-hidden bg-[#1a2a44]">
-      {/* Background Media */}
+      {/*
+        Fondo, en orden de preferencia: video propio, imagen propia, o el
+        patron cartografico generado. Nunca fotografia de banco.
+      */}
       {videoUrl ? (
         <div className="absolute inset-0 w-full h-full z-0 overflow-hidden">
           <video
@@ -44,22 +51,21 @@ export default function Hero({
             muted
             playsInline
             className="absolute inset-0 w-full h-full object-cover"
-            poster={fallbackImageUrl}
+            poster={posterUrl || undefined}
           >
             <source src={videoUrl} type="video/mp4" />
-            Tu navegador no soporta videos.
           </video>
-          {/* Overlay to ensure readability */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
+        </div>
+      ) : posterUrl ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center z-0"
+          style={{ backgroundImage: `url('${posterUrl}')` }}
+        >
           <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
         </div>
       ) : (
-        <div
-          className="absolute inset-0 bg-cover bg-center z-0"
-          style={{ backgroundImage: `url('${fallbackImageUrl}')` }}
-        >
-          {/* Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#1a2a44]/80 via-[#1a2a44]/60 to-[#1a2a44]/30"></div>
-        </div>
+        <FondoTopografico />
       )}
 
       {/* Content */}

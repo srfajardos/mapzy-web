@@ -12,6 +12,7 @@ export default function Navbar() {
     { name: 'Herramientas', href: '/herramientas' },
     { name: 'Artículos', href: '/articulos' },
     { name: 'Servicios', href: '/servicios' },
+    { name: 'Proyectos', href: '/proyectos' },
     { name: 'Blog', href: '/blog' },
   ];
 

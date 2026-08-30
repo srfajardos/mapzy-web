@@ -1,4 +1,5 @@
 import React from 'react';
+import FondoTopografico from '@/components/FondoTopografico';
 import Link from 'next/link';
 import { ChevronRight } from 'lucide-react';
 import { client } from '@/sanity/lib/client';
@@ -36,7 +37,7 @@ export default async function BlogPage() {
         titulo: p.title || 'Artículo sin título',
         fecha: p.publishedAt ? new Date(p.publishedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Fecha no especificada',
         resumen: p.summary || 'Sin descripción disponible',
-        imagen: (p.mainImage && p.mainImage.asset) ? urlFor(p.mainImage).url() : 'https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&q=80&w=300',
+        imagen: (p.mainImage && p.mainImage.asset) ? urlFor(p.mainImage).url() : '/media/marcador-mapzy.svg',
       }));
     }
   } catch (error) {
@@ -47,7 +48,7 @@ export default async function BlogPage() {
     <div className="bg-white pb-16 animate-in fade-in duration-500">
       {/* Header */}
       <div className="bg-[#1a2a44] text-white py-20 px-4 mb-16 relative overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center opacity-10" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1504151932400-72d4384f04b3?auto=format&fit=crop&q=80&w=600')" }}></div>
+        <div className="absolute inset-0 opacity-25"><FondoTopografico /></div>
         <div className="relative z-10 max-w-7xl mx-auto text-center">
           <span className="text-yellow-400 font-bold uppercase tracking-widest text-sm mb-3 inline-block">Conocimiento Territorial</span>
           <h1 className="text-4xl md:text-6xl font-black mb-6">Nuestro Blog</h1>
