@@ -34,3 +34,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Copia fallida del prototipo: contiene el texto de un error, no HTML
+docs/CONSOLA_CAZA_REFERENCIA.html
